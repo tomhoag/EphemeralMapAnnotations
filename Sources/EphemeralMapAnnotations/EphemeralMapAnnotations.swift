@@ -9,9 +9,6 @@ import MapKit
 
 /**
  Protocol defining mutable requirements for map annotations.
-
- Extends `EphDerivable` to add mutability to the base properties, allowing
- annotations to be updated during their lifecycle.
  */
 public protocol EphRepresentable: Equatable {
     var id: Int { get set }
@@ -19,7 +16,7 @@ public protocol EphRepresentable: Equatable {
 }
 
 /**
- Protocol for types that provide collections of map annotations.
+ Protocol for types that provide collections of EphRepresentable annotations.
 
  Implementing types must specify the concrete type of annotations they provide
  through the associated type `EphRepresentableType`.
@@ -27,8 +24,8 @@ public protocol EphRepresentable: Equatable {
  Example implementation:
  ```swift
  struct MyProvider: EphRepresentableProvider {
-     typealias EphRepresentableType = MyAnnotationType
-     @State var places: [MyAnnotationType] = []
+    @State var places: [MyAnnotationType] = []
+    @State var stateManager = EphStateManager<MyAnnotationType>()
  }
  ```
  */
