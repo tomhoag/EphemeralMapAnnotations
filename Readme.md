@@ -2,7 +2,7 @@
 
 Using the SwiftUI Map can be tricky when you want specific animations to occur.  This package specifically addresses the animation of addition and removal of map annotations.
 
-[![Watch the video](https://github.com/tomhoag/EphemeralMapAnnotations/blob/main/Ephemeral.png)](https://github.com/tomhoag/EphemeralMapAnnotations/blob/main/Ephemeral.mp4)
+
 
 ### The Setup
 
