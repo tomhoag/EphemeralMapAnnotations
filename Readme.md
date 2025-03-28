@@ -2,62 +2,68 @@
 
 Using the SwiftUI Map can be tricky when you want specific animations to occur.  This package specifically addresses the animation of addition and removal of map annotations.
 
+[![Watch the video](https://raw.githubusercontent.com/username/repository/branch/path/to/thumbnail.jpg)](https://raw.githubusercontent.com/username/repository/branch/path/to/video.mp4)
+
 ### The Setup
 
+Using `EphemeralMapAnnotations` requires a small bit of setup. 
 
+1. Define a struct that will wrap the `CLLocationCoordinate2D`'s and make it conform to the `EphRepresentable` protocol.
 
-The animation requires that the `CLLocationCoordinate2D`'s used to create `MapAnnotations` be wrapped in an struct that conforms to `EphRepresentable`.
+	```
+	struct Location: EphRepresentable {
+	    // EphRepresentable requires conformance to Equatable.
+	    // Add the necessary conformance function here . . 
+	    
+	    var id: Int
+	    var coordinate: CLLocationCoordinate2D
+	}
+	```
 
-```
-struct Locations: EphRepresentable {
-    // EphRepresentable requires conformance to Identifiable and Equatable.
-    // Add the necessary conformance functions here . . 
-    
-    var id: Int
-    var coordinate: CLLocationCoordinate2D
-}
-```
+2. The class or struct that declares your array of `EphRepresentable`s must conform to `EphRepresentableProvider`.  This is likely either the view that holds the `Map` or the view model of the view that holds the `Map`
 
-There are a couple additional vars required in the view that holds the Map:
+	```
+	struct ContentView: View, EphRepresentableProvider {
+	    @State var ephemeralPlaces: [Location] = []
+	    @State var stateManager = EphStateManager<Location>()
+	
+		<< other struct stuff>>
+	}
+	```
+The EphStateManager requires the type being managed be specified as shown.
 
-```
-@State private var previousPlaces: [Location]?
-@State private var annotationStates: [EphAnnotationState<Location>] = []
-```
-    
-In the View that holds your Locations, you will need to typealias your Locations to `EphRepresentableType` and type your `locations` array as EphRepresentable Type:
+## The Map
 
-```
-typealias EphRepresentableType = Location
-@State var locations: [EphRepresentableType] = []
-```
-
-Your locations array can be held in the view that holds the map, or if you prefer it can be held in the view's model. You only need to be able to reference the provider in the map modifier.
-
-### The Map Modifier
-
-As your locations update, animate their removal and addition using the `.onEphRepresentableChange` modifiler on the Map.
+Setup your `Map` as usual and add the `EphRepresentable` locations as `Annotations` by invoking `annotations` on your state manager as shown below.
 
 ```
 Map(position: $cameraPosition, interactionModes: .all) {
-                ForEach(annotationStates, id: \.place.id) { state in
-                    Annotation(state.place.name, coordinate: state.place.coordinate) {
-                    	EphSystemImageAnnotationView<Locations>(annotationState: state)
-                }
-            }
-            .padding()
-            .onAppear {
-                Task { @MainActor in
-                    updateLocations()
-                    cameraPosition = .region(mapRegion)
-                }
-            }
-            .onEphRepresentableChange(
-                provider: self,
-                previousPlaces: $previousPlaces,
-                annotationStates: $annotationStates
-            )
+    stateManager.annotations { state in
+        Annotation(state.place.name, coordinate: state.place.coordinate) {
+            Circle()
+                .frame(width: 20)
+                .foregroundColor(.red)
+                .ephemeralEffect(annotationState: state)
+       }
+    }
+}
+.onEphRepresentableChange( provider: self )
 ```
-The provider property should be set to the instance or struct that holds the reference to your array of [EphRepresentable] -- likely the view that holds the map or the views model.
 
-## Customizing the Map Annotation
+Each Annotation View should have the `.ephemeralEffect(annotationState: )` modifier added to it and the Map should have the `.onEphRepresentableChange(provider: )` modifier added to it.  The provider parameter should be set to the instance that conforms to `EphRepresentableProvider`
+
+Alternatively, the annotation states can be iterated over using a `ForEach`
+
+```
+Map(position: $cameraPosition, interactionModes: .all) {
+    ForEach(stateManager.annotations, id:\.place.id) { state in
+        Annotation(state.place.name, coordinate: state.place.coordinate) {
+            Circle()
+                .frame(width: 20)
+                .foregroundColor(.red)
+                .ephemeralEffect(annotationState: state)
+       }
+    }
+}
+.onEphRepresentableChange( provider: self )
+```

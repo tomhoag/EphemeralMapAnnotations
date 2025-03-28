@@ -41,6 +41,12 @@ public class EphStateManager<ER: EphRepresentable>: ObservableObject {
     public var annotationStates: [EphAnnotationState<ER>] = []
 
     public init() {}
+
+    public func annotations<Content: View>(content: @escaping (EphAnnotationState<ER>) -> Annotation<Text, Content>) -> ForEach<[EphAnnotationState<ER>], Int, Annotation<Text, Content>> {
+        return ForEach(annotationStates, id: \.place.id) { state in
+            content(state)
+        }
+    }
 }
 
 /**

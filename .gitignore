@@ -54,3 +54,4 @@ playground.xcworkspace
 # Carthage/Checkouts
 Carthage/Build/
 
+Sources/ContentView.swift
