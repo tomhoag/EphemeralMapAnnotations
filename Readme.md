@@ -2,7 +2,7 @@
 
 Using the SwiftUI Map can be tricky when you want specific animations to occur.  This package specifically addresses the animation of addition and removal of map annotations.
 
-
+https://github.com/user-attachments/assets/a63e05d4-3ba3-4ec8-8c3a-9d1a23ef284b
 
 ### The Setup
 
