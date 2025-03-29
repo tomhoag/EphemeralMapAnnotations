@@ -25,18 +25,16 @@ public protocol EphRepresentable: Equatable {
  ```swift
  struct MyProvider: EphRepresentableProvider {
     @State var places: [MyAnnotationType] = []
-    @State var stateManager = EphStateManager<MyAnnotationType>()
  }
  ```
  */
-public protocol EphRepresentableProvider {
-    associatedtype EphRepresentableType: EphRepresentable
-    var ephemeralPlaces: [EphRepresentableType] { get set }
-    var stateManager: EphStateManager<EphRepresentableType> { get }
-}
+//public protocol EphRepresentableProvider {
+//    associatedtype EphRepresentableType: EphRepresentable
+//    var ephemeralPlaces: [EphRepresentableType] { get set }
+//}
 
 @MainActor @Observable
-public class EphStateManager<ER: EphRepresentable>: ObservableObject {
+public class EphStateManager<ER: EphRepresentable> {
     public var previousPlaces: [ER]?
     public var annotationStates: [EphAnnotationState<ER>] = []
 
