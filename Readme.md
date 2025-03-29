@@ -38,24 +38,6 @@ Setup your `Map` as usual and add the `EphRepresentable` locations as `Annotatio
 
 ```
 Map(position: $cameraPosition, interactionModes: .all) {
-    stateManager.annotations { state in
-        Annotation(state.place.name, coordinate: state.place.coordinate) {
-            Circle()
-                .frame(width: 20)
-                .foregroundColor(.red)
-                .ephemeralEffect(annotationState: state)
-       }
-    }
-}
-.onEphRepresentableChange( provider: self )
-```
-
-Each Annotation View should have the `.ephemeralEffect(annotationState: )` modifier added to it and the Map should have the `.onEphRepresentableChange(provider: )` modifier added to it.  The provider parameter should be set to the instance that conforms to `EphRepresentableProvider`
-
-Alternatively, the annotation states can be iterated over using a `ForEach`
-
-```
-Map(position: $cameraPosition, interactionModes: .all) {
     ForEach(stateManager.annotations, id:\.place.id) { state in
         Annotation(state.place.name, coordinate: state.place.coordinate) {
             Circle()
@@ -65,6 +47,10 @@ Map(position: $cameraPosition, interactionModes: .all) {
        }
     }
 }
-.onEphRepresentableChange( provider: self )
+.onEphRepresentableChange( ephemeralManager )
 ```
+
+Each Annotation View should have the `.ephemeralEffect(annotationState: )` modifier added to it and the Map should have the `.onEphRepresentableChange(provider: )` modifier added to it.  The provider parameter should be set to the instance that conforms to `EphRepresentableProvider`
+
+
 ### See ContentView.swift for a full example.

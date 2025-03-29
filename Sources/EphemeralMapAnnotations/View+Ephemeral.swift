@@ -7,8 +7,10 @@
 
 import SwiftUI
 
+// MARK: Constants
+
 /**
- Constants used for animation timing and behavior throughout the ephemeral annotation system.
+ Constants used for animation timing and behavior throughout the ephemeral system.
  */
 public enum EphAnimationConstants {
     /// Duration of animations in seconds
@@ -19,37 +21,41 @@ public enum EphAnimationConstants {
     public static let removingAnimation = Animation.easeInOut(duration: duration)
 }
 
+// MARK: EphemeralChangeModifer
+
 /**
  ViewModifier that manages the lifecycle of map annotations.
 
  Handles the addition and removal of annotations with appropriate animations.
  Automatically cleans up removed annotations after their exit animation completes.
  */
-public struct EphRepresentableChangeModifier<Provider: EphRepresentableProvider>: ViewModifier {
-    let provider: Provider
+public struct EphemoralChangeModifier<ER: Ephemeral>: ViewModifier {
+
+    let ephemeralPlaces: [ER]
+    let ephemeralManager: EphemeralManager<ER>
     var animationDuration: CGFloat = EphAnimationConstants.duration
     @State private var cleanupTask: Task<Void, Never>?
 
     public func body(content: Content) -> some View {
         content
-            .onChange(of: provider.ephemeralPlaces) { _, newPlaces in
-                guard let previousPlaces = provider.stateManager.previousPlaces else {
-                    provider.stateManager.previousPlaces = newPlaces
-                    provider.stateManager.annotationStates = newPlaces.map { EphAnnotationState(place: $0) }
+            .onChange(of: ephemeralPlaces) { _, newPlaces in
+                guard let previousPlaces = ephemeralManager.previousPlaces else {
+                    ephemeralManager.previousPlaces = newPlaces
+                    ephemeralManager.items = newPlaces.map { EphemeralItem(place: $0) }
                     return
                 }
 
                 let changes = calculateChanges(oldPlaces: previousPlaces, newPlaces: newPlaces)
 
                 // Add new states
-                provider.stateManager.annotationStates.append(contentsOf: changes.toAdd.map { EphAnnotationState(place: $0) })
+                ephemeralManager.items.append(contentsOf: changes.toAdd.map { EphemeralItem(place: $0) })
 
                 // Mark states for removal
-                for state in provider.stateManager.annotationStates where changes.toRemove.contains(state.place.id) {
+                for state in ephemeralManager.items where changes.toRemove.contains(state.place.id) {
                     state.prepareForRemoval()
                 }
 
-                // Cancel and remove existing tasks
+                // Cancel and remove existing task
                 cleanupTask?.cancel()
 
                 // Start new cleanup
@@ -57,97 +63,101 @@ public struct EphRepresentableChangeModifier<Provider: EphRepresentableProvider>
                     try? await Task.sleep(for: .seconds(animationDuration))
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
-                        provider.stateManager.annotationStates.removeAll { changes.toRemove.contains($0.place.id) }
+                        ephemeralManager.items.removeAll { changes.toRemove.contains($0.place.id) }
                     }
                 }
 
-                provider.stateManager.previousPlaces = newPlaces
+                ephemeralManager.previousPlaces = newPlaces
             }
             .onDisappear {
                 cleanupTask?.cancel()
             }
     }
 
-    private struct Changes {
-        let toAdd: [Provider.EphRepresentableType]
-        let toRemove: Set<Int>
+    private struct Changes<ER: Ephemeral> {
+        let toAdd: [ER]
+        let toRemove: Set<ER.ID>
     }
 
-    private func calculateChanges(
-        oldPlaces: [Provider.EphRepresentableType],
-        newPlaces: [Provider.EphRepresentableType]
-    ) -> Changes {
-        let oldIds = Dictionary(uniqueKeysWithValues: oldPlaces.map { ($0.id, $0) })
-        let newIds = Dictionary(uniqueKeysWithValues: newPlaces.map { ($0.id, $0) })
+    private func calculateChanges<ER: Ephemeral>(oldPlaces: [ER], newPlaces: [ER]) -> Changes<ER> {
+        let oldDict = Dictionary(uniqueKeysWithValues: oldPlaces.map { ($0.id, $0) })
+        let newDict = Dictionary(uniqueKeysWithValues: newPlaces.map { ($0.id, $0) })
 
-        let toAdd = newPlaces.filter { !oldIds.keys.contains($0.id) }
-        let toRemove = Set(oldIds.keys).subtracting(newIds.keys)
+        let toAdd = newPlaces.filter { place in
+            !oldDict.keys.contains(place.id)
+        }
+        let toRemove = Set(oldDict.keys).subtracting(newDict.keys)
 
         return Changes(toAdd: toAdd, toRemove: toRemove)
     }
 }
-
-/**
- ViewModifier that applies ephemeral animation effects to an annotation views as they appear and disappear.
- */
-public struct EphemeralEffectModifier<P: EphRepresentable>: ViewModifier {
-    @ObservedObject var annotationState: EphAnnotationState<P>
-    var addingAnimation: Animation = EphAnimationConstants.addingAnimation
-    var removingAnimation: Animation = EphAnimationConstants.removingAnimation
-
-    public func body(content: Content) -> some View {
-        content
-            .opacity(annotationState.isVisible ? 1 : 0)
-            .scaleEffect(annotationState.isVisible ? 1 : 0)
-            .animation(
-                annotationState.isRemoving ?
-                    removingAnimation :
-                    addingAnimation,
-                value: annotationState.isVisible
-            )
-            .onAppear {
-                if !annotationState.isRemoving {
-                    annotationState.makeVisible()
-                }
-            }
-    }
-}
-
-// MARK: - View Extensions
 
 public extension View {
     /**
      Applies the ephemeral map annotation change modifier to a view.
 
      - Parameters:
-        - provider: The source of annotation data
-        - previousPlaces: Binding to track the previous state of annotations
-        - annotationStates: Binding to the current annotation states
-        - animationDuration: The duration of the longer of the two (adding, removing) animations used in the ephemeralEffect modifier. If no animations are specified there, this parameter should not be passed in.
+     - provider: The source of annotation data
+     - previousPlaces: Binding to track the previous state of annotations
+     - annotationStates: Binding to the current annotation states
+     - animationDuration: The duration of the longer of the two (adding, removing) animations used in the ephemeralEffect modifier. If no animations are specified there, this parameter should not be passed in.
      */
-    func onEphRepresentableChange<Provider: EphRepresentableProvider>(
-        provider: Provider,
+    func onEphemoralChange<ER: Ephemeral>(
+        ephemeralPlaces: [ER],
+        ephemeralManager: EphemeralManager<ER>,
         animationDuration: CGFloat = EphAnimationConstants.duration
     ) -> some View {
-        modifier(EphRepresentableChangeModifier(
-            provider: provider,
+        modifier(EphemoralChangeModifier(
+            ephemeralPlaces: ephemeralPlaces,
+            ephemeralManager: ephemeralManager,
             animationDuration: animationDuration
         ))
     }
+}
+
+// MARK: EphemeralEffectModifer
+
+/**
+ ViewModifier that applies ephemeral animation effects to an annotation views as they appear and disappear.
+ */
+public struct EphemeralEffectModifier<E: Ephemeral>: ViewModifier {
+    @ObservedObject var ephemeralItem: EphemeralItem<E>
+    var addingAnimation: Animation = EphAnimationConstants.addingAnimation
+    var removingAnimation: Animation = EphAnimationConstants.removingAnimation
+
+    public func body(content: Content) -> some View {
+        content
+            .opacity(ephemeralItem.isVisible ? 1 : 0)
+            .scaleEffect(ephemeralItem.isVisible ? 1 : 0)
+            .animation(
+                ephemeralItem.isRemoving ?
+                    removingAnimation :
+                    addingAnimation,
+                value: ephemeralItem.isVisible
+            )
+            .onAppear {
+                if !ephemeralItem.isRemoving {
+                    ephemeralItem.makeVisible()
+                }
+            }
+    }
+}
+
+public extension View {
 
     /**
      Applies ephemeral animation effects to a view.
 
      - Parameter annotationState: The state controlling the view's animations
      */
-    func ephemeralEffect<P: EphRepresentable>(
-        annotationState: EphAnnotationState<P>,
+    func ephemeralEffect<E: Ephemeral>(
+        ephemeralItem: EphemeralItem<E>,
         addingAnimation: Animation = EphAnimationConstants.addingAnimation,
         removingAnimation: Animation = EphAnimationConstants.removingAnimation
     ) -> some View {
         modifier(
             EphemeralEffectModifier(
-                annotationState: annotationState,
+                ephemeralItem: ephemeralItem,
                 addingAnimation: addingAnimation,
                 removingAnimation: removingAnimation
             )
