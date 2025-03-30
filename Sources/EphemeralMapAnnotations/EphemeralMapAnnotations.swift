@@ -4,14 +4,13 @@
 //  Created by Tom Hoag on 3/23/25.
 //
 
-import SwiftUI
 import MapKit
+import SwiftUI
 
 /**
  Protocol defining mutable requirements for map annotations.
  */
-public protocol Ephemeral: Equatable, Identifiable {
-    associatedtype ID: Hashable
+public protocol Ephemeral: Equatable, Identifiable where ID: Hashable {
     var id: ID { get set }
     var coordinate: CLLocationCoordinate2D { get set }
 }

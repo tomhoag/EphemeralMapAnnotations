@@ -30,7 +30,6 @@ public enum EphAnimationConstants {
  Automatically cleans up removed annotations after their exit animation completes.
  */
 public struct EphemoralChangeModifier<ER: Ephemeral>: ViewModifier {
-
     let ephemeralPlaces: [ER]
     let ephemeralManager: EphemeralManager<ER>
     var animationDuration: CGFloat = EphAnimationConstants.duration
@@ -144,7 +143,6 @@ public struct EphemeralEffectModifier<E: Ephemeral>: ViewModifier {
 }
 
 public extension View {
-
     /**
      Applies ephemeral animation effects to a view.
 
