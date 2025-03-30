@@ -5,18 +5,10 @@
 //  Created by Tom Hoag on 3/27/25.
 //
 
-
-//
-//  ContentView.swift
-//  MapAnimations
-//
-//  Created by Tom Hoag on 3/23/25.
-//
-
-import SwiftUI
+import EphemeralMapAnnotations
 import MapKit
 import MichiganCities
-import EphemeralMapAnnotations
+import SwiftUI
 
 extension MichiganCity: @retroactive EphRepresentable {
     // EphRepresentable requires conformance to Identifiable and Equatable.
@@ -25,38 +17,40 @@ extension MichiganCity: @retroactive EphRepresentable {
 }
 
 struct ContentView: View, EphRepresentableProvider {
-
     // MARK: EphRepresentableProvider
+
     @State var ephemeralPlaces: [MichiganCity] = []
     @State var stateManager = EphStateManager<MichiganCity>()
 
     // MARK: ContentView state
+
     @State var cameraPosition: MapCameraPosition = .automatic
     @State private var buttonScale: CGFloat = 1.0
 
     // MARK: vars and funcs for map and UI
+
     var body: some View {
         VStack {
             Button("Drink Me") {
-                updatePlaces()
+                self.updatePlaces()
                 withAnimation(.easeInOut(duration: 0.4999)) {
-                    buttonScale = buttonScale < 0.5 ? 1.0 : 0
+                    self.buttonScale = self.buttonScale < 0.5 ? 1.0 : 0
                 }
             }
             .font(.largeTitle)
 
             HStack {
-                ForEach(0...6, id: \.self) { _ in
+                ForEach(0 ... 6, id: \.self) { _ in
                     Image(systemName: "star.fill")
                         .font(.largeTitle)
                         .foregroundColor(.yellow)
-                        .scaleEffect(buttonScale)
-                        .animation(.easeInOut(duration: 0.5), value: buttonScale)
+                        .scaleEffect(self.buttonScale)
+                        .animation(.easeInOut(duration: 0.5), value: self.buttonScale)
                 }
             }
 
-            Map(position: $cameraPosition, interactionModes: .all) {
-                stateManager.annotations { state in
+            Map(position: self.$cameraPosition, interactionModes: .all) {
+                self.stateManager.annotations { state in
                     Annotation(state.place.name, coordinate: state.place.coordinate) {
                         Circle()
                             .frame(width: 20)
@@ -65,15 +59,14 @@ struct ContentView: View, EphRepresentableProvider {
                     }
                 }
             }
-            .onEphRepresentableChange( provider: self )
+            .onEphRepresentableChange(provider: self)
             .padding()
             .onAppear {
                 Task { @MainActor in
-                    updatePlaces()
-                    cameraPosition = .region(mapRegion)
+                    self.updatePlaces()
+                    self.cameraPosition = .region(self.mapRegion)
                 }
             }
-
         }
     }
 
@@ -83,13 +76,13 @@ struct ContentView: View, EphRepresentableProvider {
             latitude: 43.802819,
             longitude: -86.112938
         )
-        
+
         // Span to show both peninsulas with some padding
         let span = MKCoordinateSpan(
             latitudeDelta: 6.0,
             longitudeDelta: 8.0
         )
-        
+
         return MKCoordinateRegion(center: center, span: span)
     }
 

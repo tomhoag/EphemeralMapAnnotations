@@ -6,7 +6,7 @@ let package = Package(
     name: "EphemeralMapAnnotations",
     platforms: [
         .iOS(.v17),
-        .macOS(.v14)
+        .macOS(.v14),
     ],
     products: [
         .library(
@@ -20,5 +20,4 @@ let package = Package(
         .testTarget(
             name: "EphemeralMapAnnotationsTests",
             dependencies: ["EphemeralMapAnnotations"]),
-    ]
-)
+    ])
