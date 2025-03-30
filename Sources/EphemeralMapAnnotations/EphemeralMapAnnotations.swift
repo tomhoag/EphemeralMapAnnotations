@@ -11,7 +11,7 @@ import SwiftUI
  Protocol defining mutable requirements for map annotations.
  */
 public protocol Ephemeral: Equatable, Identifiable where ID: Hashable {
-    var id: ID { get set }
+    var id: ID { get }
     var coordinate: CLLocationCoordinate2D { get set }
 }
 
